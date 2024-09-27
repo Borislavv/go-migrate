@@ -8,6 +8,7 @@ import (
 	"github.com/Borislavv/go-migrate/pkg/migrate/storage"
 	"github.com/golang-migrate/migrate/v4"
 	"golang.org/x/sync/errgroup"
+	"sync"
 )
 
 var (
@@ -44,15 +45,7 @@ func New(ctx context.Context, logger logger.Logger, factory storage.Factorier) (
 func (m *Migrate) Up() error {
 	eg := &errgroup.Group{}
 	ctx := context.Background()
-
 	logsCh := make(chan *log, len(m.storages))
-	defer close(logsCh)
-
-	go func() {
-		for l := range logsCh {
-			m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
-		}
-	}()
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
@@ -93,14 +86,30 @@ func (m *Migrate) Up() error {
 		})
 	}
 
-	return eg.Wait()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- eg.Wait()
+		close(logsCh)
+	}()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for l := range logsCh {
+			m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
+		}
+	}()
+	wg.Wait()
+
+	return <-errCh
 }
 
 // Down executes each migrator in parallel wrapping them in errgroup without context.
 func (m *Migrate) Down() error {
 	eg := &errgroup.Group{}
 	ctx := context.Background()
-	logsCh := make(chan *log)
+	logsCh := make(chan *log, len(m.storages))
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
@@ -141,19 +150,23 @@ func (m *Migrate) Down() error {
 		})
 	}
 
-	resultCh := make(chan error, 1)
-	defer close(resultCh)
-
+	errCh := make(chan error, 1)
 	go func() {
-		resultCh <- eg.Wait()
+		errCh <- eg.Wait()
 		close(logsCh)
 	}()
 
-	for l := range logsCh {
-		m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
-	}
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for l := range logsCh {
+			m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
+		}
+	}()
+	wg.Wait()
 
-	return <-resultCh
+	return <-errCh
 }
 
 // Migrators returns all for self management.
