@@ -5,10 +5,12 @@ import (
 	"errors"
 	"github.com/Borislavv/go-logger/pkg/logger"
 	"github.com/Borislavv/go-migrate/pkg/migrate/storage"
+	"github.com/golang-migrate/migrate/v4"
 	"golang.org/x/sync/errgroup"
 )
 
 var (
+	ErrNoChanges       = migrate.ErrNoChange
 	ErrMigratorFactory = errors.New("failed to make migrators")
 	ErrMigrationFailed = errors.New("error while migrating")
 )
@@ -33,13 +35,19 @@ func New(ctx context.Context, logger logger.Logger, factory storage.Factorier) (
 }
 
 // Up executes each migrator in parallel wrapping them in errgroup without context.
-func (m *Migrate) Up() error {
-	eg := errgroup.Group{}
+//   - withCtx determines whether the errgroup will be spawned with the context (if so, the context will be terminated
+//     when the first error occurs, and other migrators that did not have an error will be closed).
+func (m *Migrate) Up(withCtx bool) error {
+	eg := &errgroup.Group{}
+	ctx := context.Background()
+	if withCtx {
+		eg, ctx = errgroup.WithContext(m.ctx)
+	}
+
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
 			if err := migrator.Up(); err != nil {
-				return m.logger.Fatal(
-					context.Background(),
+				return m.logger.Fatal(ctx,
 					errors.New(migrator.Name()+": up: "+ErrMigrationFailed.Error()+": "+err.Error()),
 					logger.Fields{
 						"err":     err.Error(),
@@ -54,13 +62,19 @@ func (m *Migrate) Up() error {
 }
 
 // Down executes each migrator in parallel wrapping them in errgroup without context.
-func (m *Migrate) Down() error {
-	eg := errgroup.Group{}
+//   - withCtx determines whether the errgroup will be spawned with the context (if so, the context will be terminated
+//     when the first error occurs, and other migrators that did not have an error will be closed).
+func (m *Migrate) Down(withCtx bool) error {
+	eg := &errgroup.Group{}
+	ctx := context.Background()
+	if withCtx {
+		eg, ctx = errgroup.WithContext(m.ctx)
+	}
+
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
 			if err := migrator.Down(); err != nil {
-				return m.logger.Fatal(
-					context.Background(),
+				return m.logger.Fatal(ctx,
 					errors.New(migrator.Name()+": down: "+ErrMigrationFailed.Error()+": "+err.Error()),
 					logger.Fields{
 						"err":     err.Error(),
