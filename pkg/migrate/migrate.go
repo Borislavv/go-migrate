@@ -14,6 +14,11 @@ var (
 	ErrMigratorFactory = errors.New("failed to make migrators")
 )
 
+type log struct {
+	msg    string
+	fields logger.Fields
+}
+
 type Migrate struct {
 	ctx      context.Context
 	logger   logger.Logger
@@ -43,29 +48,54 @@ func (m *Migrate) Up(withCtx bool) error {
 		eg, ctx = errgroup.WithContext(m.ctx)
 	}
 
+	infoLogsCh := make(chan *log)
+	defer close(infoLogsCh)
+	go func() {
+		for l := range infoLogsCh {
+			m.logger.InfoMsg(ctx, l.msg, l.fields)
+		}
+	}()
+
+	fatalLogsCh := make(chan *log)
+	defer close(fatalLogsCh)
+	go func() {
+		for l := range fatalLogsCh {
+			m.logger.FatalMsg(ctx, l.msg, l.fields)
+		}
+	}()
+
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
 			prefix := "migrations: " + migrator.Name() + ": up: "
 
 			if err := migrator.Up(); err != nil {
 				if errors.Is(err, ErrNoChanges) {
-					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
-						"storage": migrator.Name(),
-					})
-
+					infoLogsCh <- &log{
+						msg: prefix + "no changes detected",
+						fields: logger.Fields{
+							"storage": migrator.Name(),
+						},
+					}
 					return nil
 				}
 
-				return m.logger.Fatal(ctx, errors.New(prefix+"error occurred while applying migrations"), logger.Fields{
-					"err":     err.Error(),
-					"storage": migrator.Name(),
-				})
+				err = errors.New(prefix + "error occurred while applying migrations")
+				fatalLogsCh <- &log{
+					msg: err.Error(),
+					fields: logger.Fields{
+						"err":     err.Error(),
+						"storage": migrator.Name(),
+					},
+				}
+				return err
 			}
 
-			m.logger.InfoMsg(ctx, prefix+"schema successfully upped", logger.Fields{
-				"storage": migrator.Name(),
-			})
-
+			infoLogsCh <- &log{
+				msg: prefix + "schema successfully upped",
+				fields: logger.Fields{
+					"storage": migrator.Name(),
+				},
+			}
 			return nil
 		})
 	}
@@ -83,29 +113,54 @@ func (m *Migrate) Down(withCtx bool) error {
 		eg, ctx = errgroup.WithContext(m.ctx)
 	}
 
+	infoLogsCh := make(chan *log)
+	defer close(infoLogsCh)
+	go func() {
+		for l := range infoLogsCh {
+			m.logger.InfoMsg(ctx, l.msg, l.fields)
+		}
+	}()
+
+	fatalLogsCh := make(chan *log)
+	defer close(fatalLogsCh)
+	go func() {
+		for l := range fatalLogsCh {
+			m.logger.FatalMsg(ctx, l.msg, l.fields)
+		}
+	}()
+
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
 			prefix := "migrations: " + migrator.Name() + ": down: "
 
 			if err := migrator.Up(); err != nil {
 				if errors.Is(err, ErrNoChanges) {
-					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
-						"storage": migrator.Name(),
-					})
-
+					infoLogsCh <- &log{
+						msg: prefix + "no changes detected",
+						fields: logger.Fields{
+							"storage": migrator.Name(),
+						},
+					}
 					return nil
 				}
 
-				return m.logger.Fatal(ctx, errors.New(prefix+"error occurred while applying migrations"), logger.Fields{
-					"err":     err.Error(),
-					"storage": migrator.Name(),
-				})
+				err = errors.New(prefix + "error occurred while applying migrations")
+				fatalLogsCh <- &log{
+					msg: err.Error(),
+					fields: logger.Fields{
+						"err":     err.Error(),
+						"storage": migrator.Name(),
+					},
+				}
+				return err
 			}
 
-			m.logger.InfoMsg(ctx, prefix+"schema successfully downgraded", logger.Fields{
-				"storage": migrator.Name(),
-			})
-
+			infoLogsCh <- &log{
+				msg: prefix + "schema successfully downgraded",
+				fields: logger.Fields{
+					"storage": migrator.Name(),
+				},
+			}
 			return nil
 		})
 	}
