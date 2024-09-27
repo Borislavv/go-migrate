@@ -44,9 +44,15 @@ func New(ctx context.Context, logger logger.Logger, factory storage.Factorier) (
 func (m *Migrate) Up() error {
 	eg := &errgroup.Group{}
 	ctx := context.Background()
-	logsCh := make(chan *log)
 
-	m.logger.LogMsg(ctx, "0-----------------migrator STARTED-----------------0", "info", nil)
+	logsCh := make(chan *log, len(m.storages))
+	defer close(logsCh)
+
+	go func() {
+		for l := range logsCh {
+			m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
+		}
+	}()
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
@@ -87,19 +93,7 @@ func (m *Migrate) Up() error {
 		})
 	}
 
-	resultCh := make(chan error, 1)
-	defer close(resultCh)
-
-	go func() {
-		resultCh <- eg.Wait()
-		close(logsCh)
-	}()
-
-	for l := range logsCh {
-		m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
-	}
-
-	return <-resultCh
+	return eg.Wait()
 }
 
 // Down executes each migrator in parallel wrapping them in errgroup without context.
