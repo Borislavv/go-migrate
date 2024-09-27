@@ -12,7 +12,6 @@ import (
 var (
 	ErrNoChanges       = migrate.ErrNoChange
 	ErrMigratorFactory = errors.New("failed to make migrators")
-	ErrMigrationFailed = errors.New("error while migrating")
 )
 
 type Migrate struct {
@@ -46,18 +45,31 @@ func (m *Migrate) Up(withCtx bool) error {
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
+			prefix := "migrations: " + migrator.Name() + ": up: "
+
 			if err := migrator.Up(); err != nil {
-				return m.logger.Fatal(ctx,
-					errors.New(migrator.Name()+": up: "+ErrMigrationFailed.Error()+": "+err.Error()),
-					logger.Fields{
-						"err":     err.Error(),
+				if errors.Is(err, ErrNoChanges) {
+					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
 						"storage": migrator.Name(),
-					},
-				)
+					})
+
+					return nil
+				}
+
+				return m.logger.Fatal(ctx, errors.New(prefix+"error occurred while applying migrations"), logger.Fields{
+					"err":     err.Error(),
+					"storage": migrator.Name(),
+				})
 			}
+
+			m.logger.InfoMsg(ctx, prefix+"schema successfully upped", logger.Fields{
+				"storage": migrator.Name(),
+			})
+
 			return nil
 		})
 	}
+
 	return eg.Wait()
 }
 
@@ -73,18 +85,31 @@ func (m *Migrate) Down(withCtx bool) error {
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
-			if err := migrator.Down(); err != nil {
-				return m.logger.Fatal(ctx,
-					errors.New(migrator.Name()+": down: "+ErrMigrationFailed.Error()+": "+err.Error()),
-					logger.Fields{
-						"err":     err.Error(),
+			prefix := "migrations: " + migrator.Name() + ": down: "
+
+			if err := migrator.Up(); err != nil {
+				if errors.Is(err, ErrNoChanges) {
+					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
 						"storage": migrator.Name(),
-					},
-				)
+					})
+
+					return nil
+				}
+
+				return m.logger.Fatal(ctx, errors.New(prefix+"error occurred while applying migrations"), logger.Fields{
+					"err":     err.Error(),
+					"storage": migrator.Name(),
+				})
 			}
+
+			m.logger.InfoMsg(ctx, prefix+"schema successfully downgraded", logger.Fields{
+				"storage": migrator.Name(),
+			})
+
 			return nil
 		})
 	}
+
 	return eg.Wait()
 }
 
