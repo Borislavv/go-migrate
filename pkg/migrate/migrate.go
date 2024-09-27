@@ -46,6 +46,8 @@ func (m *Migrate) Up() error {
 	ctx := context.Background()
 	logsCh := make(chan *log)
 
+	m.logger.LogMsg(ctx, "0-----------------migrator STARTED-----------------0", "info", nil)
+
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
 			prefix := "migrations: " + migrator.Name() + ": up: "
