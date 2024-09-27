@@ -5,12 +5,12 @@ import (
 	"errors"
 	"github.com/Borislavv/go-logger/pkg/logger"
 	"github.com/Borislavv/go-migrate/pkg/migrate/storage"
-	"sync"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
 	ErrMigratorFactory = errors.New("failed to make migrators")
-	ErrMigrationFailed = errors.New("migration failed")
+	ErrMigrationFailed = errors.New("error while migrating")
 )
 
 type Migrate struct {
@@ -32,42 +32,49 @@ func New(ctx context.Context, logger logger.Logger, factory storage.Factorier) (
 	}, nil
 }
 
-func (m *Migrate) Up(ctx context.Context) error {
-	wg := &sync.WaitGroup{}
-	defer wg.Wait()
-
+// Up executes each migrator in parallel wrapping them in errgroup without context.
+func (m *Migrate) Up() error {
+	eg := errgroup.Group{}
 	for _, migrator := range m.storages {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		eg.Go(func() error {
 			if err := migrator.Up(); err != nil {
-				m.logger.ErrorMsg(ctx, migrator.Name()+": up: "+ErrMigrationFailed.Error(), logger.Fields{
-					"err": err.Error(),
-				})
+				return m.logger.Fatal(
+					context.Background(),
+					errors.New(migrator.Name()+": up: "+ErrMigrationFailed.Error()+": "+err.Error()),
+					logger.Fields{
+						"err":     err.Error(),
+						"storage": migrator.Name(),
+					},
+				)
 			}
-		}()
+			return nil
+		})
 	}
-
-	return nil
+	return eg.Wait()
 }
 
-func (m *Migrate) Down(ctx context.Context) error {
-	wg := &sync.WaitGroup{}
-	defer wg.Wait()
-
+// Down executes each migrator in parallel wrapping them in errgroup without context.
+func (m *Migrate) Down() error {
+	eg := errgroup.Group{}
 	for _, migrator := range m.storages {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		eg.Go(func() error {
 			if err := migrator.Down(); err != nil {
-				m.logger.ErrorMsg(ctx, migrator.Name()+": down: "+ErrMigrationFailed.Error(), logger.Fields{
-					"err": err.Error(),
-				})
+				return m.logger.Fatal(
+					context.Background(),
+					errors.New(migrator.Name()+": down: "+ErrMigrationFailed.Error()+": "+err.Error()),
+					logger.Fields{
+						"err":     err.Error(),
+						"storage": migrator.Name(),
+					},
+				)
 			}
-		}()
+			return nil
+		})
 	}
+	return eg.Wait()
+}
 
-	return nil
+// Migrators returns all for self management.
+func (m *Migrate) Migrators() []storage.Storager {
+	return m.storages
 }
