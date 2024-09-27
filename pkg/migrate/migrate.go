@@ -45,7 +45,7 @@ func New(ctx context.Context, logger logger.Logger, factory storage.Factorier) (
 func (m *Migrate) Up() error {
 	eg := &errgroup.Group{}
 	ctx := context.Background()
-	logsCh := make(chan *log, len(m.storages))
+	logsCh := make(chan *log)
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
@@ -109,7 +109,7 @@ func (m *Migrate) Up() error {
 func (m *Migrate) Down() error {
 	eg := &errgroup.Group{}
 	ctx := context.Background()
-	logsCh := make(chan *log, len(m.storages))
+	logsCh := make(chan *log)
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
