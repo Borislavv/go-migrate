@@ -3,7 +3,7 @@ module github.com/Borislavv/go-migrate
 go 1.22.1
 
 require (
-	github.com/Borislavv/go-logger v0.0.5
+	github.com/Borislavv/go-logger v0.0.8
 	github.com/Borislavv/migrate/v4 v4.18.4
 	github.com/kelseyhightower/envconfig v1.4.0
 	go.mongodb.org/mongo-driver v1.17.0

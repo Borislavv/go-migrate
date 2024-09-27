@@ -12,6 +12,10 @@ github.com/Borislavv/go-logger v0.0.4 h1:P1QPDFy+Pd7naMtEZuXhg5y80l8x26Spm8P65xn
 github.com/Borislavv/go-logger v0.0.4/go.mod h1:g9aIr+ltZd5qZy2u+nhu1j9oIrJJETFjbvWuoJX4a3k=
 github.com/Borislavv/go-logger v0.0.5 h1:/12j5b/6PvfJKCtZXsUFZ2fsyB+cIJ/ZTAzp8RyNcIs=
 github.com/Borislavv/go-logger v0.0.5/go.mod h1:g9aIr+ltZd5qZy2u+nhu1j9oIrJJETFjbvWuoJX4a3k=
+github.com/Borislavv/go-logger v0.0.7 h1:X/lUpgKYPRbXTc2hmQv0/H4c5UlWQy6nZXr9XQ+f/l4=
+github.com/Borislavv/go-logger v0.0.7/go.mod h1:g9aIr+ltZd5qZy2u+nhu1j9oIrJJETFjbvWuoJX4a3k=
+github.com/Borislavv/go-logger v0.0.8 h1:N5EVlYKue/A8oztKbCPkNLLy0z1pugZx756Jqqb8qfY=
+github.com/Borislavv/go-logger v0.0.8/go.mod h1:g9aIr+ltZd5qZy2u+nhu1j9oIrJJETFjbvWuoJX4a3k=
 github.com/Borislavv/migrate/v4 v4.0.1-0.20240926085225-b679ed25527f h1:YG0H8hZ31cRXQmNHgpUsbfCJhRaBrcgJBHJKRr77MoI=
 github.com/Borislavv/migrate/v4 v4.0.1-0.20240926085225-b679ed25527f/go.mod h1:+2yi2judzwK4/E3bq88MOaOyrxjHonMunXZeuOsYdt0=
 github.com/Borislavv/migrate/v4 v4.18.3 h1:Tf4XSmyRa/aPZ7g0Nr9hlILfzFzwvMrFeUigPt8Sg3s=
