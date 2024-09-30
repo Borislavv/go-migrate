@@ -52,24 +52,7 @@ func (m *Postgres) Name() string {
 }
 
 func (m *Postgres) Up() error {
-	if m.db == nil {
-		return errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
-	}
-
-	d, err := postgres.WithInstance(m.ctx, m.db, &postgres.Config{
-		DatabaseName:    m.cfg.GetPostgresDatabase(),
-		MigrationsTable: m.cfg.GetPostgresMigrationsTable(),
-	})
-	if err != nil {
-		return err
-	}
-
-	r, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetPostgresMigrationsDir()), DriverName, d)
+	s, err := m.migrate()
 	if err != nil {
 		return err
 	}
@@ -82,24 +65,7 @@ func (m *Postgres) Up() error {
 }
 
 func (m *Postgres) Down() error {
-	if m.db == nil {
-		return errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
-	}
-
-	d, err := postgres.WithInstance(m.ctx, m.db, &postgres.Config{
-		DatabaseName:    m.cfg.GetPostgresDatabase(),
-		MigrationsTable: m.cfg.GetPostgresMigrationsTable(),
-	})
-	if err != nil {
-		return err
-	}
-
-	r, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetPostgresMigrationsDir()), DriverName, d)
+	s, err := m.migrate()
 	if err != nil {
 		return err
 	}
@@ -109,4 +75,30 @@ func (m *Postgres) Down() error {
 	}
 
 	return nil
+}
+
+func (m *Postgres) migrate() (*migrate.Migrate, error) {
+	if m.db == nil {
+		return nil, errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
+	}
+
+	d, err := postgres.WithInstance(m.ctx, m.db, &postgres.Config{
+		DatabaseName:    m.cfg.GetPostgresDatabase(),
+		MigrationsTable: m.cfg.GetPostgresMigrationsTable(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetPostgresMigrationsDir()), DriverName, d)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }

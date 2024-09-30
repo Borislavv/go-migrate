@@ -51,24 +51,7 @@ func (m *MySQL) Name() string {
 }
 
 func (m *MySQL) Up() error {
-	if m.db == nil {
-		return errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
-	}
-
-	d, err := mysql.WithInstance(m.ctx, m.db, &mysql.Config{
-		DatabaseName:    m.cfg.GetMySQLDatabase(),
-		MigrationsTable: m.cfg.GetMySQLMigrationsTable(),
-	})
-	if err != nil {
-		return err
-	}
-
-	r, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMySQLMigrationsDir()), DriverName, d)
+	s, err := m.migrate()
 	if err != nil {
 		return err
 	}
@@ -81,24 +64,7 @@ func (m *MySQL) Up() error {
 }
 
 func (m *MySQL) Down() error {
-	if m.db == nil {
-		return errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
-	}
-
-	d, err := mysql.WithInstance(m.ctx, m.db, &mysql.Config{
-		DatabaseName:    m.cfg.GetMySQLDatabase(),
-		MigrationsTable: m.cfg.GetMySQLMigrationsTable(),
-	})
-	if err != nil {
-		return err
-	}
-
-	r, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMySQLMigrationsDir()), DriverName, d)
+	s, err := m.migrate()
 	if err != nil {
 		return err
 	}
@@ -108,4 +74,30 @@ func (m *MySQL) Down() error {
 	}
 
 	return nil
+}
+
+func (m *MySQL) migrate() (*migrate.Migrate, error) {
+	if m.db == nil {
+		return nil, errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
+	}
+
+	d, err := mysql.WithInstance(m.ctx, m.db, &mysql.Config{
+		DatabaseName:    m.cfg.GetMySQLDatabase(),
+		MigrationsTable: m.cfg.GetMySQLMigrationsTable(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMySQLMigrationsDir()), DriverName, d)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
