@@ -54,24 +54,7 @@ func (m *Mongo) Name() string {
 }
 
 func (m *Mongo) Up() error {
-	if m.db == nil {
-		return errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
-	}
-
-	d, err := mongodb.WithInstance(m.db.Client(), &mongodb.Config{
-		DatabaseName:         m.db.Name(),
-		MigrationsCollection: m.cfg.GetMongoMigrationsCollection(),
-	})
-	if err != nil {
-		return err
-	}
-
-	r, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMongoMigrationsDir()), DriverName, d)
+	s, err := m.migrate()
 	if err != nil {
 		return err
 	}
@@ -84,24 +67,7 @@ func (m *Mongo) Up() error {
 }
 
 func (m *Mongo) Down() error {
-	if m.db == nil {
-		return errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
-	}
-
-	d, err := mongodb.WithInstance(m.db.Client(), &mongodb.Config{
-		DatabaseName:         m.db.Name(),
-		MigrationsCollection: m.cfg.GetMongoMigrationsDir(),
-	})
-	if err != nil {
-		return err
-	}
-
-	r, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMongoMigrationsDir()), DriverName, d)
+	s, err := m.migrate()
 	if err != nil {
 		return err
 	}
@@ -111,4 +77,30 @@ func (m *Mongo) Down() error {
 	}
 
 	return nil
+}
+
+func (m *Mongo) migrate() (*migrate.Migrate, error) {
+	if m.db == nil {
+		return nil, errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")
+	}
+
+	d, err := mongodb.WithInstance(m.db.Client(), &mongodb.Config{
+		DatabaseName:         m.db.Name(),
+		MigrationsCollection: m.cfg.GetMongoMigrationsCollection(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMongoMigrationsDir()), DriverName, d)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
