@@ -5,12 +5,11 @@ import (
 	"errors"
 	"github.com/Borislavv/go-logger/pkg/logger"
 	"github.com/Borislavv/go-migrate/pkg/migrate/storage"
-	"github.com/golang-migrate/migrate/v4"
+	"github.com/Borislavv/migrate/v4"
 	"golang.org/x/sync/errgroup"
 )
 
 var (
-	ErrNoChanges               = migrate.ErrNoChange
 	ErrMigratorFactory         = errors.New("failed to make migrators")
 	ErrNoOneMigratorWasDefined = errors.New("no migrators were defined")
 )
@@ -48,7 +47,7 @@ func (m *Migrate) Up() error {
 			prefix := "migrations: " + migrator.Name() + ": up: "
 
 			if err := migrator.Up(); err != nil {
-				if errors.Is(err, ErrNoChanges) {
+				if errors.Is(err, migrate.ErrNoChange) {
 					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
 						"storage": migrator.Name(),
 					})
@@ -81,7 +80,7 @@ func (m *Migrate) Down() error {
 			prefix := "migrations: " + migrator.Name() + ": down: "
 
 			if err := migrator.Down(); err != nil {
-				if errors.Is(err, ErrNoChanges) {
+				if errors.Is(err, migrate.ErrNoChange) {
 					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
 						"storage": migrator.Name(),
 					})

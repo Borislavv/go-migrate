@@ -46,7 +46,7 @@ func TestMigrate_Up(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = m.Up(context.Background()); err != nil {
+	if err = m.Up(); err != nil {
 		t.Fatal(err)
 	}
 }
