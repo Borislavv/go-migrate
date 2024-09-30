@@ -80,7 +80,7 @@ func (m *Migrate) Down() error {
 		eg.Go(func() error {
 			prefix := "migrations: " + migrator.Name() + ": down: "
 
-			if err := migrator.Up(); err != nil {
+			if err := migrator.Down(); err != nil {
 				if errors.Is(err, ErrNoChanges) {
 					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
 						"storage": migrator.Name(),
