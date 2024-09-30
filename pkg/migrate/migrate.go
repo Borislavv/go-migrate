@@ -4,23 +4,16 @@ import (
 	"context"
 	"errors"
 	"github.com/Borislavv/go-logger/pkg/logger"
-	loggerenum "github.com/Borislavv/go-logger/pkg/logger/enum"
 	"github.com/Borislavv/go-migrate/pkg/migrate/storage"
 	"github.com/golang-migrate/migrate/v4"
 	"golang.org/x/sync/errgroup"
-	"sync"
 )
 
 var (
-	ErrNoChanges       = migrate.ErrNoChange
-	ErrMigratorFactory = errors.New("failed to make migrators")
+	ErrNoChanges               = migrate.ErrNoChange
+	ErrMigratorFactory         = errors.New("failed to make migrators")
+	ErrNoOneMigratorWasDefined = errors.New("no migrators were defined")
 )
-
-type log struct {
-	msg    string
-	level  string
-	fields logger.Fields
-}
 
 type Migrate struct {
 	ctx      context.Context
@@ -34,6 +27,10 @@ func New(ctx context.Context, logger logger.Logger, factory storage.Factorier) (
 		return nil, logger.Fatal(ctx, ErrMigratorFactory, nil)
 	}
 
+	if len(storages) == 0 {
+		return nil, logger.Fatal(ctx, ErrNoOneMigratorWasDefined, nil)
+	}
+
 	return &Migrate{
 		ctx:      ctx,
 		logger:   logger,
@@ -45,7 +42,6 @@ func New(ctx context.Context, logger logger.Logger, factory storage.Factorier) (
 func (m *Migrate) Up() error {
 	eg := &errgroup.Group{}
 	ctx := context.Background()
-	logsCh := make(chan *log)
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
@@ -53,63 +49,32 @@ func (m *Migrate) Up() error {
 
 			if err := migrator.Up(); err != nil {
 				if errors.Is(err, ErrNoChanges) {
-					logsCh <- &log{
-						msg:   prefix + "no changes detected",
-						level: loggerenum.InfoLvl,
-						fields: logger.Fields{
-							"storage": migrator.Name(),
-						},
-					}
+					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
+						"storage": migrator.Name(),
+					})
 					return nil
 				}
 
-				err = errors.New(prefix + "error occurred while applying migrations")
-				logsCh <- &log{
-					msg:   err.Error(),
-					level: loggerenum.FatalLvl,
-					fields: logger.Fields{
-						"err":     err.Error(),
-						"storage": migrator.Name(),
-					},
-				}
-				return err
+				return m.logger.Fatal(ctx, errors.New(prefix+"error occurred while applying migrations"), logger.Fields{
+					"err":     err.Error(),
+					"storage": migrator.Name(),
+				})
 			}
 
-			logsCh <- &log{
-				msg:   prefix + "schema successfully upped",
-				level: loggerenum.InfoLvl,
-				fields: logger.Fields{
-					"storage": migrator.Name(),
-				},
-			}
+			m.logger.InfoMsg(ctx, prefix+"schema successfully upped", logger.Fields{
+				"storage": migrator.Name(),
+			})
 			return nil
 		})
 	}
 
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- eg.Wait()
-		close(logsCh)
-	}()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for l := range logsCh {
-			m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
-		}
-	}()
-	wg.Wait()
-
-	return <-errCh
+	return eg.Wait()
 }
 
 // Down executes each migrator in parallel wrapping them in errgroup without context.
 func (m *Migrate) Down() error {
 	eg := &errgroup.Group{}
 	ctx := context.Background()
-	logsCh := make(chan *log)
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
@@ -117,56 +82,26 @@ func (m *Migrate) Down() error {
 
 			if err := migrator.Up(); err != nil {
 				if errors.Is(err, ErrNoChanges) {
-					logsCh <- &log{
-						msg:   prefix + "no changes detected",
-						level: loggerenum.InfoLvl,
-						fields: logger.Fields{
-							"storage": migrator.Name(),
-						},
-					}
+					m.logger.InfoMsg(ctx, prefix+"no changes detected", logger.Fields{
+						"storage": migrator.Name(),
+					})
 					return nil
 				}
 
-				err = errors.New(prefix + "error occurred while applying migrations")
-				logsCh <- &log{
-					msg:   err.Error(),
-					level: loggerenum.FatalLvl,
-					fields: logger.Fields{
-						"err":     err.Error(),
-						"storage": migrator.Name(),
-					},
-				}
-				return err
+				return m.logger.Fatal(ctx, errors.New(prefix+"error occurred while applying migrations"), logger.Fields{
+					"err":     err.Error(),
+					"storage": migrator.Name(),
+				})
 			}
 
-			logsCh <- &log{
-				msg:   prefix + "schema successfully downgraded",
-				level: loggerenum.InfoLvl,
-				fields: logger.Fields{
-					"storage": migrator.Name(),
-				},
-			}
+			m.logger.InfoMsg(ctx, prefix+"schema successfully downgraded", logger.Fields{
+				"storage": migrator.Name(),
+			})
 			return nil
 		})
 	}
 
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- eg.Wait()
-		close(logsCh)
-	}()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for l := range logsCh {
-			m.logger.LogMsg(ctx, l.msg, l.level, l.fields)
-		}
-	}()
-	wg.Wait()
-
-	return <-errCh
+	return eg.Wait()
 }
 
 // Migrators returns all for self management.
