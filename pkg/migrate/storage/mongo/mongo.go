@@ -103,8 +103,8 @@ func (m *Mongo) migrate() (*migrate.Migrate, error) {
 		return nil, fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
-	destDir := filepath.Join(rootDir, DriverName)
-	if err = os.Mkdir(destDir, 0777); err != nil {
+	destDir := filepath.Join(rootDir, "tmp", DriverName)
+	if err = os.MkdirAll(destDir, 0777); err != nil {
 		return nil, fmt.Errorf("could not create MongoDB migrations directory: %w", err)
 	}
 
