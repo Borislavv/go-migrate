@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"os"
+	"path/filepath"
 )
 
 const DriverName = "mongodb"
@@ -97,15 +98,22 @@ func (m *Mongo) migrate() (*migrate.Migrate, error) {
 		return nil, err
 	}
 
-	if err = os.Mkdir(DriverName, 0777); err != nil {
+	rootDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	destDir := filepath.Join(rootDir, DriverName)
+	if err = os.Mkdir(destDir, 0777); err != nil {
 		return nil, fmt.Errorf("could not create MongoDB migrations directory: %w", err)
 	}
 
-	if err = os.CopyFS(DriverName, m.fs); err != nil {
+	if err = os.CopyFS(destDir, m.fs); err != nil {
 		return nil, fmt.Errorf("could not copy MongoDB migrations fs: %w", err)
 	}
 
-	s, err := migrate.NewWithDatabaseInstance("file://"+DriverName+"/migrations", DriverName, d)
+	migrationsDir := filepath.Join(destDir, "migrations")
+	s, err := migrate.NewWithDatabaseInstance("file://"+migrationsDir, DriverName, d)
 	if err != nil {
 		return nil, err
 	}
