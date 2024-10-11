@@ -3,12 +3,12 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
 	"github.com/Borislavv/migrate/v4"
 	"github.com/Borislavv/migrate/v4/database/postgres"
 	"os"
-	"path/filepath"
 )
 
 const DriverName = "postgres"
@@ -17,9 +17,10 @@ type Postgres struct {
 	ctx context.Context
 	db  *sql.DB
 	cfg Configurator
+	fs  embed.FS
 }
 
-func New(ctx context.Context, cfg Configurator) (*Postgres, error) {
+func New(ctx context.Context, cfg Configurator, fs embed.FS) (*Postgres, error) {
 	dsn := fmt.Sprintf(
 		"%s://%s:%s@%s:%s/%s",
 		DriverName,
@@ -44,7 +45,7 @@ func New(ctx context.Context, cfg Configurator) (*Postgres, error) {
 		return nil, err
 	}
 
-	return &Postgres{ctx: ctx, db: db, cfg: cfg}, nil
+	return &Postgres{ctx: ctx, db: db, cfg: cfg, fs: fs}, nil
 }
 
 func (m *Postgres) Name() string {
@@ -90,12 +91,15 @@ func (m *Postgres) migrate() (*migrate.Migrate, error) {
 		return nil, err
 	}
 
-	r, err := os.Getwd()
-	if err != nil {
-		return nil, err
+	if err = os.Mkdir(DriverName, 0777); err != nil {
+		return nil, fmt.Errorf("could not create PostgreSQL migrations directory: %w", err)
 	}
 
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetPostgresMigrationsDir()), DriverName, d)
+	if err = os.CopyFS(DriverName, m.fs); err != nil {
+		return nil, fmt.Errorf("could not copy PostgreSQL migrations fs: %w", err)
+	}
+
+	s, err := migrate.NewWithDatabaseInstance("file://"+DriverName+"/migrations", DriverName, d)
 	if err != nil {
 		return nil, err
 	}

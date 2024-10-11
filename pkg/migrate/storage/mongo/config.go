@@ -9,7 +9,6 @@ type Configurator interface {
 	GetMongoPassword() string
 	GetMongoDatabase() string
 	GetMongoMigrationsCollection() string
-	GetMongoMigrationsDir() string
 	IsMongoMigrationsEnabled() bool
 }
 
@@ -21,7 +20,6 @@ type Config struct {
 	MongoPassword             string `envconfig:"MONGO_PASSWORD"`
 	MongoDatabase             string `envconfig:"MONGO_DATABASE"`
 	MongoMigrationsCollection string `envconfig:"MONGO_MIGRATIONS_COLLECTION" default:"migrationVersions"`
-	MongoMigrationsDir        string `envconfig:"MONGO_MIGRATIONS_DIR"`
 }
 
 func Load() (*Config, error) {
@@ -58,8 +56,4 @@ func (c *Config) GetMongoDatabase() string {
 
 func (c *Config) GetMongoMigrationsCollection() string {
 	return c.MongoMigrationsCollection
-}
-
-func (c *Config) GetMongoMigrationsDir() string {
-	return c.MongoMigrationsDir
 }

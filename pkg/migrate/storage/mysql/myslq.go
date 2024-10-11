@@ -3,12 +3,12 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
 	"github.com/Borislavv/migrate/v4"
 	"github.com/Borislavv/migrate/v4/database/mysql"
 	"os"
-	"path/filepath"
 )
 
 const DriverName = "mysql"
@@ -17,9 +17,10 @@ type MySQL struct {
 	ctx context.Context
 	db  *sql.DB
 	cfg Configurator
+	fs  embed.FS
 }
 
-func New(ctx context.Context, cfg Configurator) (*MySQL, error) {
+func New(ctx context.Context, cfg Configurator, fs embed.FS) (*MySQL, error) {
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?multiStatements=true",
 		cfg.GetMySQLUsername(),
@@ -43,7 +44,7 @@ func New(ctx context.Context, cfg Configurator) (*MySQL, error) {
 		return nil, err
 	}
 
-	return &MySQL{ctx: ctx, db: db, cfg: cfg}, nil
+	return &MySQL{ctx: ctx, db: db, cfg: cfg, fs: fs}, nil
 }
 
 func (m *MySQL) Name() string {
@@ -89,12 +90,15 @@ func (m *MySQL) migrate() (*migrate.Migrate, error) {
 		return nil, err
 	}
 
-	r, err := os.Getwd()
-	if err != nil {
-		return nil, err
+	if err = os.Mkdir(DriverName, 0777); err != nil {
+		return nil, fmt.Errorf("could not create MySQL migrations directory: %w", err)
 	}
 
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMySQLMigrationsDir()), DriverName, d)
+	if err = os.CopyFS(DriverName, m.fs); err != nil {
+		return nil, fmt.Errorf("could not copy MySQL migrations filesystem: %w", err)
+	}
+
+	s, err := migrate.NewWithDatabaseInstance("file://"+DriverName+"/migrations", DriverName, d)
 	if err != nil {
 		return nil, err
 	}

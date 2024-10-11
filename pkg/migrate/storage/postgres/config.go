@@ -10,7 +10,6 @@ type Configurator interface {
 	GetPostgresHost() string
 	GetPostgresPort() string
 	GetPostgresMigrationsTable() string
-	GetPostgresMigrationsDir() string
 }
 
 type Config struct {
@@ -21,7 +20,6 @@ type Config struct {
 	PostgresPassword          string `envconfig:"POSTGRES_PASSWORD"`
 	PostgresDatabase          string `envconfig:"POSTGRES_DATABASE"`
 	PostgresMigrationsTable   string `envconfig:"POSTGRES_MIGRATIONS_TABLE" default:"migration_versions"`
-	PostgresMigrationsDir     string `envconfig:"POSTGRES_MIGRATIONS_DIR"`
 }
 
 func Load() (*Config, error) {
@@ -58,8 +56,4 @@ func (c *Config) GetPostgresDatabase() string {
 
 func (c *Config) GetPostgresMigrationsTable() string {
 	return c.PostgresMigrationsTable
-}
-
-func (c *Config) GetPostgresMigrationsDir() string {
-	return c.PostgresMigrationsDir
 }

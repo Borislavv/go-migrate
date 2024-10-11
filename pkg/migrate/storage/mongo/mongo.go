@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"github.com/Borislavv/migrate/v4"
@@ -11,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"os"
-	"path/filepath"
 )
 
 const DriverName = "mongodb"
@@ -19,9 +19,10 @@ const DriverName = "mongodb"
 type Mongo struct {
 	db  *mongo.Database
 	cfg Configurator
+	fs  embed.FS
 }
 
-func New(ctx context.Context, cfg Configurator) (*Mongo, error) {
+func New(ctx context.Context, cfg Configurator, fs embed.FS) (*Mongo, error) {
 	clientOptions := options.Client().ApplyURI(fmt.Sprintf(
 		"%s://%s:%s@%s:%s/?authSource=%s",
 		DriverName,
@@ -46,7 +47,11 @@ func New(ctx context.Context, cfg Configurator) (*Mongo, error) {
 		return nil, err
 	}
 
-	return &Mongo{db: mongoClient.Database(cfg.GetMongoDatabase()), cfg: cfg}, nil
+	return &Mongo{
+		db:  mongoClient.Database(cfg.GetMongoDatabase()),
+		cfg: cfg,
+		fs:  fs,
+	}, nil
 }
 
 func (m *Mongo) Name() string {
@@ -92,12 +97,15 @@ func (m *Mongo) migrate() (*migrate.Migrate, error) {
 		return nil, err
 	}
 
-	r, err := os.Getwd()
-	if err != nil {
-		return nil, err
+	if err = os.Mkdir(DriverName, 0777); err != nil {
+		return nil, fmt.Errorf("could not create MongoDB migrations directory: %w", err)
 	}
 
-	s, err := migrate.NewWithDatabaseInstance("file://"+filepath.Join(r, m.cfg.GetMongoMigrationsDir()), DriverName, d)
+	if err = os.CopyFS(DriverName, m.fs); err != nil {
+		return nil, fmt.Errorf("could not copy MongoDB migrations fs: %w", err)
+	}
+
+	s, err := migrate.NewWithDatabaseInstance("file://"+DriverName+"/migrations", DriverName, d)
 	if err != nil {
 		return nil, err
 	}

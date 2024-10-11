@@ -10,7 +10,6 @@ type Configurator interface {
 	GetMySQLHost() string
 	GetMySQLPort() string
 	GetMySQLMigrationsTable() string
-	GetMySQLMigrationsDir() string
 }
 
 type Config struct {
@@ -21,7 +20,6 @@ type Config struct {
 	MySQLPassword          string `envconfig:"MYSQL_PASSWORD"`
 	MySQLDatabase          string `envconfig:"MYSQL_DATABASE"`
 	MySQLMigrationsTable   string `envconfig:"MYSQL_MIGRATIONS_TABLE" default:"migration_versions"`
-	MySQLMigrationsDir     string `envconfig:"MYSQL_MIGRATIONS_DIR"`
 }
 
 func Load() (*Config, error) {
@@ -58,8 +56,4 @@ func (c *Config) GetMySQLDatabase() string {
 
 func (c *Config) GetMySQLMigrationsTable() string {
 	return c.MySQLMigrationsTable
-}
-
-func (c *Config) GetMySQLMigrationsDir() string {
-	return c.MySQLMigrationsDir
 }
