@@ -1,5 +1,11 @@
 ## Migration library 
 
+### Note: 
+**The following directories are reserved and will be cleared before each execution.**
+1. {rootProjectDir}/tmp/mongodb
+2. {rootProjectDir}/tmp/mysql
+3. {rootProjectDir}/tmp/postgres
+
 ### Example: 
     func main() {
         if err := run(); err != nil {

@@ -104,6 +104,10 @@ func (m *Mongo) migrate() (*migrate.Migrate, error) {
 	}
 
 	destDir := filepath.Join(rootDir, "tmp", DriverName)
+	if err = os.RemoveAll(destDir); err != nil {
+		return nil, fmt.Errorf("could not clear temporary MongoDB migrations directory: %w", err)
+	}
+
 	if err = os.MkdirAll(destDir, 0777); err != nil {
 		return nil, fmt.Errorf("could not create MongoDB migrations directory: %w", err)
 	}
