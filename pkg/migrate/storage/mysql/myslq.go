@@ -78,6 +78,28 @@ func (m *MySQL) Down() error {
 	return nil
 }
 
+func (m *MySQL) Force(n int) error {
+	s, err := m.migrate()
+	if err != nil {
+		return err
+	}
+
+	if err = s.Force(n); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MySQL) Version() (version uint, dirty bool, err error) {
+	s, err := m.migrate()
+	if err != nil {
+		return 0, true, err
+	}
+
+	return s.Version()
+}
+
 func (m *MySQL) migrate() (*migrate.Migrate, error) {
 	if m.db == nil {
 		return nil, errors.New("the underlying database pointer is not initialized, you need to call the 'New' method first")

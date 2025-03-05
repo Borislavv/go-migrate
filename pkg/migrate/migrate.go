@@ -103,6 +103,34 @@ func (m *Migrate) Down() error {
 	return eg.Wait()
 }
 
+func (m *Migrate) Force(n int, migrator storage.Storager) error {
+	if err := migrator.Force(n); err != nil {
+		return m.logger.Fatal(
+			context.Background(),
+			errors.New("migrations: "+migrator.Name()+": force: error occurred while force migrate to version"),
+			logger.Fields{
+				"err":     err.Error(),
+				"storage": migrator.Name(),
+			},
+		)
+	}
+	return nil
+}
+
+func (m *Migrate) Version(migrator storage.Storager) (version uint, dirty bool, err error) {
+	if version, dirty, err = migrator.Version(); err != nil {
+		return version, dirty, m.logger.Fatal(
+			context.Background(),
+			errors.New("migrations: "+migrator.Name()+": version: error occurred while fetching state"),
+			logger.Fields{
+				"err":     err.Error(),
+				"storage": migrator.Name(),
+			},
+		)
+	}
+	return version, dirty, err
+}
+
 // Migrators returns all for self management.
 func (m *Migrate) Migrators() []storage.Storager {
 	return m.storages
