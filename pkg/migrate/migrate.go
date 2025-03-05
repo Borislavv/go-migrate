@@ -103,35 +103,35 @@ func (m *Migrate) Down() error {
 	return eg.Wait()
 }
 
-func (m *Migrate) Force(n int, migrator storage.Storager) error {
-	if err := migrator.Force(n); err != nil {
+func (m *Migrate) Force(n int, storage storage.Storager) error {
+	if err := storage.Force(n); err != nil {
 		return m.logger.Fatal(
 			context.Background(),
-			errors.New("migrations: "+migrator.Name()+": force: error occurred while force migrate to version"),
+			errors.New("migrations: "+storage.Name()+": force: error occurred while force migrate to version"),
 			logger.Fields{
 				"err":     err.Error(),
-				"storage": migrator.Name(),
+				"storage": storage.Name(),
 			},
 		)
 	}
 	return nil
 }
 
-func (m *Migrate) Version(migrator storage.Storager) (version uint, dirty bool, err error) {
-	if version, dirty, err = migrator.Version(); err != nil {
+func (m *Migrate) Version(storage storage.Storager) (version uint, dirty bool, err error) {
+	if version, dirty, err = storage.Version(); err != nil {
 		return version, dirty, m.logger.Fatal(
 			context.Background(),
-			errors.New("migrations: "+migrator.Name()+": version: error occurred while fetching state"),
+			errors.New("migrations: "+storage.Name()+": version: error occurred while fetching state"),
 			logger.Fields{
 				"err":     err.Error(),
-				"storage": migrator.Name(),
+				"storage": storage.Name(),
 			},
 		)
 	}
 	return version, dirty, err
 }
 
-// Migrators returns all for self management.
-func (m *Migrate) Migrators() []storage.Storager {
+// Storages returns all for self management.
+func (m *Migrate) Storages() []storage.Storager {
 	return m.storages
 }
