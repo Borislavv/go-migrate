@@ -44,7 +44,7 @@ func (m *Migrate) Up() error {
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
-			prefix := "migrations: " + migrator.Name() + ": up: "
+			prefix := "migrations: [storage: " + migrator.Name() + ", action: Up]: "
 
 			if err := migrator.Up(); err != nil {
 				if errors.Is(err, migrate.ErrNoChange) {
@@ -77,7 +77,7 @@ func (m *Migrate) Down() error {
 
 	for _, migrator := range m.storages {
 		eg.Go(func() error {
-			prefix := "migrations: " + migrator.Name() + ": down: "
+			prefix := "migrations: [storage: " + migrator.Name() + ", action: Down]: "
 
 			if err := migrator.Down(); err != nil {
 				if errors.Is(err, migrate.ErrNoChange) {
@@ -107,7 +107,7 @@ func (m *Migrate) Force(n int, storage storage.Storager) error {
 	if err := storage.Force(n); err != nil {
 		return m.logger.Fatal(
 			context.Background(),
-			errors.New("migrations: "+storage.Name()+": force: error occurred while force migrate to version"),
+			errors.New("migrations: [storage: "+storage.Name()+", action: Force]: error occurred while force migrate to version"),
 			logger.Fields{
 				"err":     err.Error(),
 				"storage": storage.Name(),
@@ -121,7 +121,7 @@ func (m *Migrate) Version(storage storage.Storager) (version uint, dirty bool, e
 	if version, dirty, err = storage.Version(); err != nil {
 		return version, dirty, m.logger.Fatal(
 			context.Background(),
-			errors.New("migrations: "+storage.Name()+": version: error occurred while fetching state"),
+			errors.New("migrations: [storage: "+storage.Name()+", action: Version]: error occurred while fetching state"),
 			logger.Fields{
 				"err":     err.Error(),
 				"storage": storage.Name(),
