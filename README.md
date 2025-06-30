@@ -1,5 +1,7 @@
 ## Migration library 
 
+Lightweight Go migration tool with built-in support for MongoDB, PostgreSQL, and MySQL. Migrations are embedded into the binary using Go’s embed.FS — no external files needed at runtime. Run versioned migrations consistently across multiple databases with one command. Perfect for CI/CD and containerized deployments where you need reliable, portable, multi-DB migrations in a single Go binary.
+
 ### Note: 
 **The following directories are reserved and will be cleared before each execution.**
 1. {rootProjectDir}/tmp/mongodb
